@@ -740,8 +740,9 @@ class Dbscene extends EventEmitter {
 	 * Returns the dbscene listening port
 	 * @returns {number|string} The port that dbscene is listening on (default is 50011)
 	 */
+	// eslint-disable-next-line class-methods-use-this
 	getListenPort() {
-		return this.dbServer.address().port;
+		return this.config.DS100.Reply;
 	}
 }
 
