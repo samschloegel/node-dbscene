@@ -1,36 +1,37 @@
 {
-  "name": "dbscene",
-  "version": "0.0.1",
-  "description": "dbscene npm package",
-  "main": "index.js",
-  "scripts": {
-    "lint": "eslint ./",
-    "dev": "nodemon index.js",
-    "docs": "jsdoc -c ./jsdoc_conf.js"
-  },
-  "keywords": [
-    "dbaudio",
-    "d&b",
-    "ds100",
-    "soundscape"
-  ],
-  "author": "Sam Schloegel",
-  "license": "MIT",
-  "dependencies": {
-    "node-osascript": "^2.1.0",
-    "osc-min": "^1.1.2"
-  },
-  "devDependencies": {
-    "eslint": "^7.9.0",
-    "eslint-config-airbnb-base": "^14.2.0",
-    "eslint-config-prettier": "^6.11.0",
-    "eslint-plugin-import": "^2.22.0",
-    "eslint-plugin-prettier": "^3.1.4",
-    "jsdoc": "^3.6.6",
-    "prettier": "^2.1.2"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/samschloegel/node-dbscene.git"
-  }
+	"name": "dbscene",
+	"version": "0.0.1",
+	"description": "dbscene npm package",
+	"main": "index.js",
+	"scripts": {
+		"lint": "eslint ./",
+		"dev": "nodemon index.js",
+		"docs": "jsdoc -c ./jsdoc_conf.js"
+	},
+	"keywords": [
+		"dbaudio",
+		"d&b",
+		"ds100",
+		"soundscape",
+		"qlab"
+	],
+	"author": "Sam Schloegel",
+	"license": "MIT",
+	"dependencies": {
+		"node-osascript": "^2.1.0",
+		"osc-min": "^1.1.2"
+	},
+	"devDependencies": {
+		"eslint": "^7.9.0",
+		"eslint-config-airbnb-base": "^14.2.0",
+		"eslint-config-prettier": "^6.11.0",
+		"eslint-plugin-import": "^2.22.0",
+		"eslint-plugin-prettier": "^3.1.4",
+		"jsdoc": "^3.6.6",
+		"prettier": "^2.1.2"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/samschloegel/node-dbscene.git"
+	}
 }
