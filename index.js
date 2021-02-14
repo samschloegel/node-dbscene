@@ -21,12 +21,25 @@ const osc = require('osc-min');
  */
 
 /**
- * A cache object
+ * A Soundscape object
  * @typedef {Object} CacheObj
  * @property {string|number} num - The En-Scene object number
  * @property {string} name - The object name
  * @property {number} x - The object's x-coordinate
  * @property {number} y - The object's y-coordinate
+ */
+
+/**
+ * The config object
+ * @typedef {Object} DbsceneConfig
+ * @property {Object} qlab - The QLab-related options
+ * @property {String} qlab.address - The IP address of the QLab machine
+ * @property {integer} qlab.ds100Patch
+ * @property {float} qlab.defaultDuration
+ * @property {Object} ds100 - The DS100-related options
+ * @property {String} ds100.address - The IP address of the DS100
+ * @property {integer} ds100.defaultMapping=
+ * @property {integer} logging - The logging level
  */
 
 /**
@@ -54,7 +67,7 @@ function fromBuffer(msg) {
  * @returns {void}
  */
 function logOscIn(oscMessage, rinfo) {
-	console.log(`Server received: "${oscMessage.oscString}" from ${rinfo.address}:${rinfo.port}`);
+	console.log(`dbscene: received: "${oscMessage.oscString}" from ${rinfo.address}:${rinfo.port}`);
 }
 
 /**
@@ -75,7 +88,7 @@ function logOscOut(message, address, port) {
 	} else {
 		destination = ` to ${address}:${port}`;
 	}
-	console.log(`Server sent: ${sentString}${destination}`);
+	console.log(`dbscene: sent: ${sentString}${destination}`);
 }
 
 /**
@@ -104,17 +117,21 @@ function checkMapping(mapping) {
 class Dbscene extends EventEmitter {
 	/**
 	 * Constructor
-	 * @param {string} cacheFile Path to the cache file
-	 * @param {string} configFile Path to the config file
-	 * @param {Object} io The socket.io object
-	 * @param {Object} options The options object
+	 * @param {DbsceneConfig} config
+	 * @param {CacheObj[]} cache The Soundscape objects
 	 */
-	constructor(cache, config) {
+	constructor(config, cache) {
 		super();
 		this.cache = cache;
 		this.config = config;
+		this.config.ds100.port = 50010;
+		this.config.ds100.reply = 50011;
+		this.config.qlab.port = 53000;
+		this.config.qlab.reply = 53001;
+		if (this.config.logging === undefined) this.config.logging = 0;
 		this.dbServer = udp.createSocket('udp4');
 		this.qlabServer = udp.createSocket('udp4');
+		console.log('dbscene: Logging level:', this.config.logging);
 	}
 
 	/**
@@ -132,9 +149,9 @@ class Dbscene extends EventEmitter {
 	startDbServer() {
 		const { dbServer } = this;
 
-		dbServer.bind(this.config.DS100.Reply, () => {
+		dbServer.bind(this.config.ds100.reply, () => {
 			console.log(
-				`dbscene server listening on ${dbServer.address().address}:${dbServer.address().port}`
+				`dbscene: dbServer listening on ${dbServer.address().address}:${dbServer.address().port}`
 			);
 		});
 
@@ -142,12 +159,12 @@ class Dbscene extends EventEmitter {
 		dbServer.setMaxListeners(100);
 
 		dbServer.on('error', (error) => {
-			console.error(`dbscene Server error!`);
 			console.error(error);
 			dbServer.close(() => {
 				this.emit('dbServerClosed');
-				console.log('dbscene Server has closed due to error');
+				console.log('dbscene: dbServer has closed due to error');
 			});
+			throw error;
 		});
 
 		// Incoming message handler
@@ -160,12 +177,12 @@ class Dbscene extends EventEmitter {
 					dbServer.emit('dbaudio1', oscMessage);
 				} else {
 					console.error(
-						new Error(`dbscene server received an unusable OSC message: ${oscMessage.oscString}`)
+						new Error(`dbscene dbServer received an unusable OSC message: ${oscMessage.oscString}`)
 					);
 				}
 			} catch (error) {
 				console.error(
-					`Error: could not interpret incoming message from ${rinfo.address}:${rinfo.port}:`
+					`dbscene Could not interpret incoming message from ${rinfo.address}:${rinfo.port}`
 				);
 				console.error(error);
 			}
@@ -204,28 +221,30 @@ class Dbscene extends EventEmitter {
 	startQLabServer() {
 		const { qlabServer } = this;
 
-		qlabServer.bind(this.config.QLab.Reply, () => {
+		qlabServer.bind(this.config.qlab.reply, () => {
 			console.log(
-				`QLab Server listening on ${qlabServer.address().address}:${qlabServer.address().port}`
+				`dbscene: qlabServer listening on ${qlabServer.address().address}:${
+					qlabServer.address().port
+				}`
 			);
 		});
 
 		qlabServer.setMaxListeners(100);
 
 		qlabServer.on('error', (error) => {
-			console.log('QLab Server error:');
 			console.error(error);
 			qlabServer.close(() => {
 				this.emit('qlabServerClosed');
-				console.log('QLab Server has closed due to error');
+				console.log('dbscene: qlabServer has closed due to error');
 			});
+			throw error;
 		});
 
 		// Imcoming message handler
 		qlabServer.on('message', (msg, rinfo) => {
 			try {
 				const oscMessage = fromBuffer(msg);
-				logOscIn(oscMessage, rinfo);
+				if (this.config.logging >= 2) logOscIn(oscMessage, rinfo);
 
 				if (oscMessage.pathArr[0] === 'reply') {
 					const replyJSON = JSON.parse(oscMessage.argsArr[0]);
@@ -278,7 +297,7 @@ class Dbscene extends EventEmitter {
 		const mapping =
 			oscMessage.argsArr.length > 0
 				? checkMapping(oscMessage.argsArr[0])
-				: checkMapping(this.config.DS100.defaultMapping);
+				: checkMapping(this.config.ds100.defaultMapping);
 
 		await this.queryAllObjPos();
 
@@ -291,7 +310,6 @@ class Dbscene extends EventEmitter {
 			});
 		} catch (error) {
 			console.error(error);
-			throw new Error('Error occured while creating and naming a new group cue'); // In the event of an error, end the function call and resolve the async promise
 		}
 
 		// eslint-disable-next-line no-restricted-syntax
@@ -301,7 +319,7 @@ class Dbscene extends EventEmitter {
 
 				this.sendToQLab({
 					address: `/cue_id/${cueID}/patch`,
-					args: [this.config.QLab.DS100Patch],
+					args: [this.config.qlab.ds100Patch],
 				});
 				this.sendToQLab({
 					address: `/cue_id/${cueID}/messageType`,
@@ -319,7 +337,7 @@ class Dbscene extends EventEmitter {
 				});
 				this.sendToQLab({
 					address: `/cue_id/${cueID}/duration`,
-					args: [this.config.QLab.defaultDuration],
+					args: [this.config.qlab.defaultDuration],
 				});
 				this.sendToQLab({
 					address: `/move/${cueID}`,
@@ -327,7 +345,6 @@ class Dbscene extends EventEmitter {
 				});
 			} catch (error) {
 				console.error(error);
-				throw new Error(`Error occured while creating a network cue for object ${cacheObj.num}`);
 			}
 		}
 
@@ -420,7 +437,7 @@ class Dbscene extends EventEmitter {
 	 * @param {number|string} mapping The mapping to be queried
 	 * @returns {CacheObj} The updated cache object
 	 */
-	queryObjPos(cacheObj, mapping = parseInt(this.config.DS100.defaultMapping)) {
+	queryObjPos(cacheObj, mapping = parseInt(this.config.ds100.defaultMapping)) {
 		checkMapping(mapping);
 		const objNum = cacheObj.num;
 
@@ -458,7 +475,7 @@ class Dbscene extends EventEmitter {
 	 * @param {number|string} mapping The mapping to be queried
 	 * @returns {CacheObj[]} The updated full cache
 	 */
-	async queryAllObjPos(mapping = parseInt(this.config.DS100.defaultMapping)) {
+	async queryAllObjPos(mapping = parseInt(this.config.ds100.defaultMapping)) {
 		checkMapping(mapping);
 		const queryArray = [];
 		this.cache.forEach((cacheObj) => {
@@ -472,11 +489,12 @@ class Dbscene extends EventEmitter {
 
 		try {
 			await Promise.all(queryArray); // Wait for all object position queries to complete
-			console.log('Position queries for all cache objects have been resolved');
+			if (this.config.logging >= 1)
+				console.log('dbscene: Position queries for all cache objects have been resolved');
 			return this.cache;
 		} catch (error) {
-			console.error('1 or more position queries were rejected:');
-			console.error(error);
+			console.error('dbscene: 1 or more position queries were rejected:');
+			if (this.config.logging >= 1) console.error(error);
 			throw error;
 		}
 	}
@@ -488,20 +506,20 @@ class Dbscene extends EventEmitter {
 	 */
 	async sendToQLab(oscMessage) {
 		const buffer = osc.toBuffer(oscMessage);
-		this.dbServer.send(
+		this.qlabServer.send(
 			buffer,
 			0,
 			buffer.length,
-			this.config.QLab.Port,
-			this.config.QLab.Address,
-			(err) => {
-				if (err) {
-					console.error(err);
-					throw err;
-				} else {
-					logOscOut(oscMessage, this.config.QLab.Address, this.config.QLab.Port);
-					return 'sent';
+			this.config.qlab.port,
+			this.config.qlab.address,
+			(error) => {
+				if (error) {
+					console.error('Could not send OSC message to QLab');
+					console.error(error);
+					throw error;
 				}
+				if (this.config.logging >= 1)
+					logOscOut(oscMessage, this.config.qlab.address, this.config.qlab.port);
 			}
 		);
 	}
@@ -517,16 +535,16 @@ class Dbscene extends EventEmitter {
 			buffer,
 			0,
 			buffer.length,
-			this.config.DS100.Port,
-			this.config.DS100.Address,
-			(err) => {
-				if (err) {
-					console.error(err);
-					throw err;
-				} else {
-					logOscOut(oscMessage, this.config.DS100.Address, this.config.DS100.Port);
-					return 'sent';
+			this.config.ds100.port,
+			this.config.ds100.address,
+			(error) => {
+				if (error) {
+					console.error('Could not send OSC message to DS100');
+					console.error(error);
+					throw error;
 				}
+				if (this.config.logging >= 1)
+					logOscOut(oscMessage, this.config.ds100.address, this.config.ds100.port);
 			}
 		);
 	}
@@ -582,7 +600,9 @@ class Dbscene extends EventEmitter {
 			`tell application id "com.figure53.QLab.4" to tell front workspace\n collapse cue id "${cueID}"\n end tell`,
 			(osaerror) => {
 				if (osaerror) {
-					console.error('An error has occured while attempting to use osascript to control QLab');
+					console.error(
+						'dbscene: An error has occured while attempting to use osascript to control QLab'
+					);
 					console.error(osaerror);
 				}
 			}
@@ -689,7 +709,7 @@ class Dbscene extends EventEmitter {
 	}
 
 	/**
-	 * Adds a new object to the cache and sorts the cache by number, then queries the position of the object and returns it.
+	 * Adds a new object to the cache and sorts the cache by number, then queries the position of the object and returns the object.
 	 * @param {string|number} objNum The number of the new object, range 1-64
 	 * @param {string} objName The name of the new object
 	 * @returns {CacheObj} The new cache object
@@ -742,7 +762,7 @@ class Dbscene extends EventEmitter {
 	 */
 	// eslint-disable-next-line class-methods-use-this
 	getListenPort() {
-		return this.config.DS100.Reply;
+		return this.config.ds100.reply;
 	}
 }
 
