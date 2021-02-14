@@ -4,9 +4,7 @@
 	"description": "dbscene npm package",
 	"main": "index.js",
 	"scripts": {
-		"lint": "eslint ./",
-		"dev": "nodemon index.js",
-		"docs": "jsdoc -c ./jsdoc_conf.js"
+		"test": "echo \"Error: no test specified\" && exit 1"
 	},
 	"keywords": [
 		"dbaudio",
