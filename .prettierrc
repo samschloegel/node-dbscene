@@ -2,5 +2,14 @@
 	"trailingComma": "es5",
 	"printWidth": 100,
 	"singleQuote": true,
-	"useTabs": true
+	"useTabs": true,
+	"overrides": [
+		{
+			"files": "*.md",
+			"options": {
+				"useTabs": false,
+				"tabSize": 2
+			}
+		}
+	]
 }
