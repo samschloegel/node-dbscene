@@ -1,0 +1,6 @@
+node_modules/
+.eslintignore
+.eslintrc.json
+.gitignore
+.prettierrc
+jsdoc_conf.js
