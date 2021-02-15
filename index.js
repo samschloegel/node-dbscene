@@ -171,6 +171,7 @@ class Dbscene extends EventEmitter {
 		dbServer.on('message', (msg, rinfo) => {
 			try {
 				const oscMessage = fromBuffer(msg);
+				if (this.config.logging >= 2) logOscIn(oscMessage, rinfo);
 				if (oscMessage.pathArr[0] === 'dbscene') {
 					dbServer.emit('dbscene', oscMessage);
 				} else if (oscMessage.pathArr[0] === 'dbaudio1') {
@@ -197,7 +198,9 @@ class Dbscene extends EventEmitter {
 			} else if (path1 === 'update') {
 				this.dbsceneUpdate(oscMessage);
 			} else {
-				console.error(new Error(`Received an unusable /dbscene message: ${oscMessage.oscString}`));
+				console.error(
+					new Error(`dbscene: dbServer received an unusable message: ${oscMessage.oscString}`)
+				);
 			}
 		});
 
