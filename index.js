@@ -122,16 +122,31 @@ class Dbscene extends EventEmitter {
 	 */
 	constructor(config, cache) {
 		super();
-		this.cache = cache;
+
 		this.config = config;
 		this.config.ds100.port = 50010;
 		this.config.ds100.reply = 50011;
 		this.config.qlab.port = 53000;
 		this.config.qlab.reply = 53001;
 		if (this.config.logging === undefined) this.config.logging = 0;
+
+		this.cache = [];
+		const cacheObjects = Object.entries(cache);
+		cacheObjects.forEach((kvPair) => {
+			const num = parseInt(kvPair[0]);
+			const name = kvPair[1];
+			const newObject = {
+				num,
+				name,
+				x: 0.0,
+				y: 0.0,
+			};
+			this.cache.push(newObject);
+		});
+		if (this.config.logging >= 2) console.log('Objects:', this.cache);
+
 		this.dbServer = udp.createSocket('udp4');
 		this.qlabServer = udp.createSocket('udp4');
-		console.log('dbscene: Logging level:', this.config.logging);
 	}
 
 	/**

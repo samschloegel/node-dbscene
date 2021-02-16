@@ -2,9 +2,7 @@
 
 Welcome to dbscene, an Open Sound Control utility for scene store/recall integration between d&amp;b audiotechnik's [DS100](https://www.dbaudio.com/global/en/products/processing-matrix/ds100/) and Figure53's [QLab](https://qlab.app/).
 
-**DISCLAIMER**: I am a live sound person, NOT a software developer. I am very new to Node, JavaScript, Git, and frankly coding in general. If the code in this project is a mess, or looks ridiculous, sorry about that.
-
-If you think you might want to use this package, but have some questions or need help, please [email me](mailto:samsdomainaddress@gmail.com) - I would love to hear from you.
+**DISCLAIMER**: This code is not extensively tested. If you're interested in using it but have questions or reservations, please do not hesitate to reach out to [samsdomainaddress@gmail.com](mailto:samsdomainaddress@gmail.com) or submit an [issue](https://github.com/samschloegel/node-dbscene/issues) on GitHub.
 
 ---
 
@@ -14,36 +12,51 @@ If you think you might want to use this package, but have some questions or need
 npm install dbscene
 ```
 
-If you're interested in trying this out but do not have a DS100 readily available for testing it, you can use [fakeds100](https://github.com/samschloegel/fakeDS100), a node app that will reply to object position requests for testing purposes.
+If you're interested in trying out this package but do not have a DS100 readily available for testing it, you could try using [fakeds100](https://github.com/samschloegel/fakeDS100), a node app that will reply to Soundscape object position requests for testing purposes.
 
 ---
 
 # Initial Setup
 
-Require the package in your code:
+After installing, require the package in your code:
 
 ```js
 const Dbscene = require('dbscene');
 ```
 
-Initialize your instance of dbscene:
+This will import a class definition.
+
+Create an instance of that class:
 
 ```js
 const dbscene = new Dbscene(config, cache);
 ```
 
-`config` and `cache` are required. See below.
+`config` and `cache` are required properties. Scroll down for details.
+
+```js
+dbscene.startDbServer();
+dbscene.startQLabServer();
+```
+
+The dbscene instance uses two udp sockets - one for the communication with the DS100 and one for communication with QLab. These two sockets are not bound to their respective ports upon creation of the dbscene instance, and should be bound by calling the methods shown above.
+
+```js
+dbscene.getAllObjPos();
+```
+
+This will request the current position of all Soundscape objects defined dbscene.cache from the DS100.
 
 ## Config
 
-Config is a copy of the following object:
+Config must be a copy of the following object:
 
 ```js
 {
   qlab: {
     address: "localhost", // The IP address of your QLab machine
     ds100Patch: 1, // Your patch number
-    defaultDuration: 0.2 // Your choice of duration, in seconds
+    defaultDuration: 0.2 // Your chosen network cue duration, in seconds
   },
   ds100: {
     address: "10.0.1.100", // Ihe IP address of your DS100
@@ -54,10 +67,24 @@ Config is a copy of the following object:
 ```
 
 - `qlab.ds100Patch` sets the QLab Network Patch of the DS100.
-- `qlab.defaultDuration` sets the length in seconds of each new "Network" cue created in QLab.
-- All object coordinates sent to a DS100 are on a "Mapping", for which a default is defined here in `ds100.defaultMapping`. See [d&b documentation](https://www.dbaudio.com/global/en/products/processing-matrix/ds100/#tab-downloads) for more information.
+- `qlab.defaultDuration` sets the length, in seconds, of each new "Network" cue created in QLab. Values greater than 0 can result in OSC messages being sent repeatedly, depending on the resend rate selected in the Network Cue Template for your QLab workspace.
+- All object coordinates sent to a DS100 have a "Mapping", for which a default is defined here in `ds100.defaultMapping`. See [d&b documentation](https://www.dbaudio.com/global/en/products/processing-matrix/ds100/#tab-downloads) for more information.
+- `logging` can optionally be included, and defaults to `0`. Errors and some basic information will be logged at level 0.
 
 ## Cache
+
+```js
+{
+  1: "Homer",
+  2: "Marjorie",
+  3: "Bartholomew",
+  4: "Lisa"
+}
+```
+
+Cache should be an object in the format shown above. For each Soundscape object, add a property using the DS100 input number as the key and a string for the value.
+
+The Dbscene constructor converts this cache object into another format - `dbscene.cache` will return an array of objects with x and y coordinates like this:
 
 ```js
 [
@@ -67,22 +94,16 @@ Config is a copy of the following object:
     x: 0.0,
     y: 0.0,
   },
-  {
-    num: 2,
-    name: 'Marge',
-    x: 0.0,
-    y: 0.0,
-  },
 ];
 ```
 
-The cache is an array of Javascript objects representing Soundscape objects.
-Each object has a `num` property which corresponds to its DS100 object number.
-The `name` property is used when creating new cues in QLab. It can be a blank string if you prefer, but it is recommended to enter the same name as is used for the object in R1/ArrayCalc, to make the resulting QLab cues easier to manage.
+The names entered will be used in the cue names of the resulting QLab cues, so make them something useful, eh?
 
 ---
 
 # Definitions
+
+For the purposes of this documentation, the terms "dbscene" and "position cue" are defined below.
 
 ## dbscenes
 
@@ -92,7 +113,19 @@ Each dbscene's qname **must** begin with the prefix "dbscene: " (including the c
 
 ## Position cues
 
-**Position cues** are the QLab Network cues within a **dbscene** group cue. Each position cue will automatically be named "{Object #} - {Object name}: {x coordinate}, {y coordinate}". You can alter these qnames as you see fit, but your custom alterations may be overwritten if the /dbscene/update method is applied to them.
+**Position cues** are the QLab Network Cues within a **dbscene**. Each position cue will automatically be named "{Object #} - {Object name}: {x coordinate}, {y coordinate}". You can manually change the qnames of a position cue as you see fit, but your custom alterations will be overwritten if the /dbscene/update method is called while the cue is selected.
+
+---
+
+# Dbscene Class Methods
+
+- getCache() - Returns the cache
+- startDbServer() - Binds the UDP socket for teh DS100 to its port and listens for OSC messages
+- startQLabServer() - See above, same idea
+- queryAllObjPos([mapping]) - Refreshes all object positions with current positions from the DS100
+- getCacheObj(objNum) - Returns the cache object with the provided number. Throws an error if none is found.
+- removeCacheObj(objNum) - Removes an object from the cache
+- newCacheObj(objNum, objName) - Adds a new object to the cache, refreshes its current position, returns the new object
 
 ---
 
@@ -110,8 +143,9 @@ Creates a new dbscene at the selection point by sending a series of OSC commands
 
 ### /dbscene/**update**
 
-In QLab, select the dbscene cues you wish to update. You may select dbscene group cues, or dbscecne network cues within them.
-With the cues selected, send /dbscene/update to update the selected cues. The simplest way to do this is likely with a hotkey from within QLab itself.
+1. In QLab, select the dbscenes you wish to update. You may select dbscenes themselves, or position cues within them.
+
+1. With the cues selected, send **/dbscene/update** to update the selected cues. The simplest way to do this is likely with a hotkey from within QLab itself.
 
 ---
 
@@ -119,4 +153,4 @@ With the cues selected, send /dbscene/update to update the selected cues. The si
 
 That's all for now. Hopefully more to come sometime soon.
 
-If you'd like to leave feedback or make a feature request, please [submit an issue](https://github.com/samschloegel/node-dbscene/issues) or [send me an email](mailto:samsdomainaddress@gmail.com).
+If you'd like to leave feedback, report a bug, or make a feature request, please [submit an issue](https://github.com/samschloegel/node-dbscene/issues) or [send me an email](mailto:samsdomainaddress@gmail.com).
