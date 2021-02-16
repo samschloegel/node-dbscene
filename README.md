@@ -2,7 +2,7 @@
 
 Welcome to dbscene, an Open Sound Control utility for scene store/recall integration between d&amp;b audiotechnik's [DS100](https://www.dbaudio.com/global/en/products/processing-matrix/ds100/) and Figure53's [QLab](https://qlab.app/).
 
-**DISCLAIMER**: This code is not extensively tested. If you're interested in using it but have questions or reservations, please do not hesitate to reach out to [samsdomainaddress@gmail.com](mailto:samsdomainaddress@gmail.com) or submit an [issue](https://github.com/samschloegel/node-dbscene/issues) on GitHub.
+**DISCLAIMER**: This code is not extensively tested. If you're interested in using it but have questions, please do not hesitate to reach out to [samsdomainaddress@gmail.com](mailto:samsdomainaddress@gmail.com) or [submit an issue](https://github.com/samschloegel/node-dbscene/issues) on GitHub.
 
 ---
 
@@ -12,7 +12,7 @@ Welcome to dbscene, an Open Sound Control utility for scene store/recall integra
 npm install dbscene
 ```
 
-If you're interested in trying out this package but do not have a DS100 readily available for testing it, you could try using [fakeds100](https://github.com/samschloegel/fakeDS100), a node app that will reply to Soundscape object position requests for testing purposes.
+If you're interested in trying out this package but do not have a DS100 readily available for testing it, you could try using [fakeds100](https://github.com/samschloegel/fake-DS100), a node app that will reply to Soundscape object position requests for testing purposes.
 
 ---
 
@@ -39,7 +39,7 @@ dbscene.startDbServer();
 dbscene.startQLabServer();
 ```
 
-The dbscene instance uses two udp sockets - one for the communication with the DS100 and one for communication with QLab. These two sockets are not bound to their respective ports upon creation of the dbscene instance, and should be bound by calling the methods shown above.
+The dbscene instance uses two UDP sockets - one for communication with the DS100 and one for communication with QLab. These two sockets are not bound to their respective listening ports (50011, 53001) upon creation of the Dbscene instance. Call the two methods shown above to begin listening for OSC messages.
 
 ```js
 dbscene.getAllObjPos();
@@ -99,6 +99,12 @@ The Dbscene constructor converts this cache object into another format - `dbscen
 
 The names entered will be used in the cue names of the resulting QLab cues, so make them something useful, eh?
 
+## QLab Setup
+
+![](docs/images/qlab_network_config.png)
+
+Make sure OSC input and output are active, and make sure the Network tab of Workspace Preferences is properly configured - probably something like the image above. Also make sure "Use OSC Controls" is checked in the OSC Controls tab.
+
 ---
 
 # Definitions
@@ -117,7 +123,7 @@ Each dbscene's qname **must** begin with the prefix "dbscene: " (including the c
 
 ---
 
-# Dbscene Class Methods
+# Dbscene Instance Methods
 
 - getCache() - Returns the cache
 - startDbServer() - Binds the UDP socket for teh DS100 to its port and listens for OSC messages
