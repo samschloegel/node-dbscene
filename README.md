@@ -2,7 +2,7 @@
 
 Welcome to dbscene, an Open Sound Control utility for scene store/recall integration between d&amp;b audiotechnik's [DS100](https://www.dbaudio.com/global/en/products/processing-matrix/ds100/) and Figure53's [QLab](https://qlab.app/).
 
-**DISCLAIMER**: This code is not extensively tested. If you're interested in using it but have questions, please do not hesitate to reach out to [samsdomainaddress@gmail.com](mailto:samsdomainaddress@gmail.com) or [submit an issue](https://github.com/samschloegel/node-dbscene/issues) on GitHub.
+**DISCLAIMER**: This code is not extensively tested. If you're interested in using it but have questions, please do not hesitate to reach out to [samsdomainaddress@gmail.com](mailto:samsdomainaddress@gmail.com) or [submit an issue](https://github.com/samschloegel/node-dbscene/issues) on GitHub. **Not affiliated with d&b audiotechnik or Figure53**.
 
 ---
 
