@@ -62,7 +62,7 @@ Config must be a copy of the following object:
     address: "10.0.1.100", // Ihe IP address of your DS100
     defaultMapping: 1 // See below
   },
-	logging: 0 // 0 - Critical Only; 1 - Some logging; 2 - More logging
+  logging: 0 // 0 - Critical Only; 1 - Some logging; 2 - More logging
 }
 ```
 
