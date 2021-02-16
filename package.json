@@ -14,7 +14,11 @@
 		"qlab",
 		"figure53"
 	],
-	"author": "Sam Schloegel",
+	"author": {
+		"name": "Sam Schloegel",
+		"email": "samsdomainaddress@gmail.com",
+		"url": "https://github.com/samschloegel"
+	},
 	"license": "MIT",
 	"dependencies": {
 		"node-osascript": "^2.1.0",
