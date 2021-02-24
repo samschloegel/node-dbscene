@@ -297,7 +297,11 @@ class Dbscene extends EventEmitter {
 
 		try {
 			const cacheObj = await this.getCacheObj(parseInt(oscMessage.pathArr[4]));
-			if (cacheObj === null) return;
+			if (cacheObj === null) {
+				if (this.config.logging >= 2)
+					console.error(new Error(`Cache object ${oscMessage.pathArr[4]} does not exist`));
+				return;
+			}
 			if (newX) cacheObj.x = newX;
 			if (newY) cacheObj.y = newY;
 			this.dbServer.emit('cacheUpdated', cacheObj);
