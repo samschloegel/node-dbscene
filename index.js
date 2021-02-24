@@ -309,6 +309,11 @@ class Dbscene extends EventEmitter {
 
 		try {
 			const cacheObj = await this.getCacheObj(parseInt(oscMessage.pathArr[4]));
+			if (cacheObj === null) {
+				if (this.config.logging >= 2)
+					console.error(new Error(`Cache object ${oscMessage.pathArr[4]} does not exist`));
+				return;
+			}
 			if (newX) cacheObj.x = newX;
 			if (newY) cacheObj.y = newY;
 			this.dbServer.emit('cacheUpdated', cacheObj);
@@ -441,6 +446,7 @@ class Dbscene extends EventEmitter {
 		const existingMapping = messagePathArr[3];
 		const objNum = parseInt(messagePathArr[4]);
 		const cacheObj = this.getCacheObj(objNum);
+		if (cacheObj === null) throw new Error(`Cache object ${objNum} does not exist`);
 
 		try {
 			await this.queryObjPos(cacheObj, existingMapping);
@@ -712,11 +718,7 @@ class Dbscene extends EventEmitter {
 	getCacheObj(objNum) {
 		const num = checkNum(objNum);
 		const cacheObj = this.cache.find((obj) => obj.num === num);
-
-		if (!cacheObj) {
-			throw new Error(`Cache object ${num} could not be found`);
-		}
-
+		if (!cacheObj) return null;
 		return cacheObj;
 	}
 
@@ -729,11 +731,13 @@ class Dbscene extends EventEmitter {
 		const num = checkNum(objNum);
 
 		const cacheObj = this.getCacheObj(num);
-		const configObjIndex = this.cache.indexOf(cacheObj);
+		if (cacheObj === null) {
+			console.error(`Cache object ${num} does not exist`);
+			return this.cache;
+		}
 
-		if (configObjIndex < 0) throw new Error('The cache object could not be found');
-		this.cache.splice(configObjIndex, 1);
-
+		const cacheObjIndex = this.cache.indexOf(cacheObj);
+		this.cache.splice(cacheObjIndex, 1);
 		return this.cache;
 	}
 
@@ -761,6 +765,7 @@ class Dbscene extends EventEmitter {
 		}
 
 		const cacheObj = await this.getCacheObj(num);
+		if (cacheObj === null) throw new Error(`New cache object was not created`);
 		return cacheObj;
 	}
 
@@ -773,6 +778,7 @@ class Dbscene extends EventEmitter {
 	async updateCacheObj(objNum, objNewName) {
 		const num = checkNum(objNum);
 		const cacheObj = await this.getCacheObj(num);
+		if (cacheObj === null) throw new Error(`Cache object ${num} does not exist`);
 
 		cacheObj.name = objNewName;
 
