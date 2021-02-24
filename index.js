@@ -115,10 +115,21 @@ function checkMapping(mapping) {
 
 /**
  * Check whether an OSC message has a valid coordinatemapping address from a DS100
+ * @param {string} string
+ * @returns {boolean}
  */
 function checkCoordinateMappingAddress(string) {
 	const coordMapRegex = /\/dbaudio1\/coordinatemapping\/source_position(_(x|y|xy))?\/[1-4]\/([1-9]$|[1-5][0-9]|6[0-4])/;
 	return coordMapRegex.test(string);
+}
+
+/**
+ * From a cache object, create a string to use as the qname of a corresponding QLab network cue
+ * @param {CacheObj} cacheObj
+ * @returns {string} Cue name, e.g. "1 - Homer: 0.56983465834, 0.98293858464"
+ */
+function createQName(cacheObj) {
+	return `${cacheObj.num} - ${cacheObj.name || '(unnamed)'}: ${cacheObj.x}, ${cacheObj.y}`;
 }
 
 class Dbscene extends EventEmitter {
@@ -210,10 +221,9 @@ class Dbscene extends EventEmitter {
 		});
 
 		dbServer.on('dbscene', (oscMessage) => {
-			const path1 = oscMessage.pathArr[1];
-			if (path1 === 'create') {
+			if (oscMessage.address === '/dbscene/create') {
 				this.dbsceneCreate(oscMessage);
-			} else if (path1 === 'update') {
+			} else if (oscMessage.address === '/dbscene/update') {
 				this.dbsceneUpdate(oscMessage);
 			} else {
 				console.error(
@@ -260,7 +270,7 @@ class Dbscene extends EventEmitter {
 			throw error;
 		});
 
-		// Imcoming message handler
+		// Incoming message handler
 		qlabServer.on('message', (msg, rinfo) => {
 			try {
 				const oscMessage = fromBuffer(msg);
@@ -353,7 +363,7 @@ class Dbscene extends EventEmitter {
 				});
 				this.sendToQLab({
 					address: `/cue_id/${cueID}/name`,
-					args: [`${cacheObj.num} - ${cacheObj.name || '(unnamed)'}: ${cacheObj.x}, ${cacheObj.y}`],
+					args: [createQName(cacheObj)],
 				});
 				this.sendToQLab({
 					address: `/cue_id/${cueID}/duration`,
@@ -446,7 +456,7 @@ class Dbscene extends EventEmitter {
 		});
 		this.sendToQLab({
 			address: `/cue_id/${cueID}/name`,
-			args: [`${cacheObj.num} - ${cacheObj.name || '(unnamed)'}: ${cacheObj.x}, ${cacheObj.y}`],
+			args: [createQName(cacheObj)],
 		});
 	}
 
