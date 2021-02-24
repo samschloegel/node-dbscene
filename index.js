@@ -34,12 +34,12 @@ const osc = require('osc-min');
  * @typedef {Object} DbsceneConfig
  * @property {Object} qlab - The QLab-related options
  * @property {String} qlab.address - The IP address of the QLab machine
- * @property {integer} qlab.ds100Patch
- * @property {float} qlab.defaultDuration
- * @property {Object} ds100 - The DS100-related options
+ * @property {number} qlab.ds100Patch - Network patch number of the DS100 in QLab
+ * @property {float} qlab.defaultDuration - Default duration of new network cues
+ * @property {Object} ds100 - DS100-related options
  * @property {String} ds100.address - The IP address of the DS100
- * @property {integer} ds100.defaultMapping=
- * @property {integer} logging - The logging level
+ * @property {number} ds100.defaultMapping - The default mapping for the DS100, 1-4
+ * @property {number} logging - The logging level, 0-2
  */
 
 /**
@@ -49,15 +49,14 @@ const osc = require('osc-min');
  */
 function fromBuffer(msg) {
 	const oscMinMsg = osc.fromBuffer(msg);
-	const extendedMsg = oscMinMsg;
-	extendedMsg.pathArr = oscMinMsg.address.split('/').slice(1);
-	extendedMsg.argsArr = oscMinMsg.args.map((arg) => arg.value);
-	if (extendedMsg.argsArr.length > 0) {
-		extendedMsg.oscString = `${oscMinMsg.address} ${oscMinMsg.argsArr.join(' ')}`;
+	oscMinMsg.pathArr = oscMinMsg.address.split('/').slice(1);
+	oscMinMsg.argsArr = oscMinMsg.args.map((arg) => arg.value);
+	if (oscMinMsg.argsArr.length > 0) {
+		oscMinMsg.oscString = `${oscMinMsg.address} ${oscMinMsg.argsArr.join(' ')}`;
 	} else {
-		extendedMsg.oscString = `${oscMinMsg.address}`;
+		oscMinMsg.oscString = `${oscMinMsg.address}`;
 	}
-	return extendedMsg;
+	return oscMinMsg;
 }
 
 /**
@@ -114,11 +113,19 @@ function checkMapping(mapping) {
 	return num;
 }
 
+/**
+ * Check whether an OSC message has a valid coordinatemapping address from a DS100
+ */
+function checkCoordinateMappingAddress(string) {
+	const coordMapRegex = /\/dbaudio1\/coordinatemapping\/source_position(_(x|y|xy))?\/[1-4]\/([1-9]$|[1-5][0-9]|6[0-4])/;
+	return coordMapRegex.test(string);
+}
+
 class Dbscene extends EventEmitter {
 	/**
 	 * Constructor
 	 * @param {DbsceneConfig} config
-	 * @param {CacheObj[]} cache The Soundscape objects
+	 * @param {Object} cache The Soundscape objects
 	 */
 	constructor(config, cache) {
 		super();
@@ -133,11 +140,9 @@ class Dbscene extends EventEmitter {
 		this.cache = [];
 		const cacheObjects = Object.entries(cache);
 		cacheObjects.forEach((kvPair) => {
-			const num = parseInt(kvPair[0]);
-			const name = kvPair[1];
 			const newObject = {
-				num,
-				name,
+				num: parseInt(kvPair[0]),
+				name: kvPair[1],
 				x: 0.0,
 				y: 0.0,
 			};
@@ -150,11 +155,11 @@ class Dbscene extends EventEmitter {
 	}
 
 	/**
-	 * Get a shallow copy of the cache
-	 * @returns {CacheObj[]} A shallow copy of the cache
+	 * Get a copy of the cache
+	 * @returns {CacheObj[]} A copy of the cache
 	 */
 	getCache() {
-		return this.cache.slice(0);
+		return this.cache.slice();
 	}
 
 	/**
@@ -170,7 +175,7 @@ class Dbscene extends EventEmitter {
 			);
 		});
 
-		// Dbscene needs to allow many simulataneous listeners in order to create scene's with up to 64 objects; the node default maximum is too low
+		// Dbscene needs to allow many simulataneous listeners in order to create scenes with up to 64 objects; the node default maximum is too low
 		dbServer.setMaxListeners(100);
 
 		dbServer.on('error', (error) => {
@@ -207,9 +212,7 @@ class Dbscene extends EventEmitter {
 		dbServer.on('dbscene', (oscMessage) => {
 			const path1 = oscMessage.pathArr[1];
 			if (path1 === 'create') {
-				this.dbsceneCreate(oscMessage).catch((error) => {
-					console.error(error);
-				});
+				this.dbsceneCreate(oscMessage);
 			} else if (path1 === 'update') {
 				this.dbsceneUpdate(oscMessage);
 			} else {
@@ -221,9 +224,8 @@ class Dbscene extends EventEmitter {
 
 		dbServer.on('dbaudio1', (oscMessage) => {
 			try {
-				if (oscMessage.pathArr[1] === 'coordinatemapping' && oscMessage.argsArr.length > 0) {
+				if (checkCoordinateMappingAddress(oscMessage.address) && oscMessage.argsArr.length > 0)
 					this.receivedCoordinates(oscMessage);
-				}
 			} catch (error) {
 				console.error(error);
 			}
@@ -421,14 +423,13 @@ class Dbscene extends EventEmitter {
 		const messageParts = customMessage.split(' ');
 
 		// Custom Message validity check
-		const coordMapAddressRegex = /\/dbaudio1\/coordinatemapping\/source_position(_(x|y|xy))?\/[1-4]\/([1-9]$|[1-5][0-9]|6[0-4])/;
-		if (!coordMapAddressRegex.test(messageParts[0])) {
+		if (!checkCoordinateMappingAddress(messageParts[0])) {
 			throw new Error('The network cue was not properly addressed for DS100 coordinate mapping');
 		}
 
-		const messageAddress = messageParts[0].split('/').slice(1);
-		const existingMapping = messageAddress[3];
-		const objNum = parseInt(messageAddress[4]);
+		const messagePathArr = messageParts[0].split('/').slice(1);
+		const existingMapping = messagePathArr[3];
+		const objNum = parseInt(messagePathArr[4]);
 		const cacheObj = this.getCacheObj(objNum);
 
 		try {
