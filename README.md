@@ -125,13 +125,13 @@ Each dbscene's qname **must** begin with the prefix "dbscene: " (including the c
 
 # Dbscene Instance Methods
 
-- getCache() - Returns the cache
-- startDbServer() - Binds the UDP socket for teh DS100 to its port and listens for OSC messages
-- startQLabServer() - See above, same idea
-- queryAllObjPos([mapping]) - Refreshes all object positions with current positions from the DS100
-- getCacheObj(objNum) - Returns the cache object with the provided number. Throws an error if none is found.
-- removeCacheObj(objNum) - Removes an object from the cache
-- newCacheObj(objNum, objName) - Adds a new object to the cache, refreshes its current position, returns the new object
+- `getCache()` - Returns the cache
+- `startDbServer()` - Binds the UDP socket for teh DS100 to its port and listens for OSC messages
+- `startQLabServer()` - See above, same idea
+- `queryAllObjPos([mapping])` - Refreshes all object positions with current positions from the DS100
+- `getCacheObj(objNum)` - Returns the cache object with the provided number. Throws an error if none is found.
+- `removeCacheObj(objNum)` - Removes an object from the cache
+- `newCacheObj(objNum, objName)` - Adds a new object to the cache, refreshes its current position, returns the new object
 
 ---
 
@@ -143,9 +143,9 @@ Each dbscene's qname **must** begin with the prefix "dbscene: " (including the c
 
 ## /**dbscene**
 
-### /dbscene/**create**
+### /dbscene/**create [mapping]**
 
-Creates a new dbscene at the selection point by sending a series of OSC commands to QLab.
+Creates a new dbscene at the selection point by sending a series of OSC commands to QLab. The mapping argument is optional; the default mapping defined in `dbscene.config.ds100.defaultMapping` will be used if a mapping argument is not provided.
 
 ### /dbscene/**update**
 
