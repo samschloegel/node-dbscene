@@ -1,6 +1,6 @@
 {
 	"name": "dbscene",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "A tool for creating and updating position snapshots of d&b audiotechnik's DS100 Soundscape objects within Figure53's QLab, using Open Sound Control (OSC).",
 	"main": "index.js",
 	"scripts": {
