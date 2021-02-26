@@ -3,3 +3,4 @@
 .gitignore
 .prettierrc
 jsdoc_conf.js
+/docs/images

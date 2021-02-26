@@ -101,9 +101,7 @@ The names entered will be used in the cue names of the resulting QLab cues, so m
 
 ## QLab Setup
 
-![](docs/images/qlab_network_config.png)
-
-Make sure OSC input and output are active, and make sure the Network tab of Workspace Preferences is properly configured - probably something like the image above. Also make sure "Use OSC Controls" is checked in the OSC Controls tab.
+OSC input and output should be active, and the Network tab of Workspace Preferences needs to be properly configured. "Use OSC Controls" needs to be checked in the OSC Controls tab.
 
 ---
 
