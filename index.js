@@ -141,6 +141,9 @@ class Dbscene extends EventEmitter {
 	constructor(config, cache) {
 		super();
 
+		if (typeof config !== 'object') throw new TypeError('Dbscene Config must be an object');
+		if (typeof cache !== 'object') throw new TypeError('Dbscene Cache must be an object');
+
 		this.config = config;
 		this.config.ds100.port = 50010;
 		this.config.ds100.reply = 50011;
