@@ -320,7 +320,7 @@ class Dbscene extends EventEmitter {
 			if (newX) cacheObj.x = newX;
 			if (newY) cacheObj.y = newY;
 			this.dbServer.emit('cacheUpdated', cacheObj);
-			this.emit('cacheUpdated', cacheObj); // This goes out so server.js can pass coordinates on to the web GUI via socketio
+			this.emit('cacheUpdated', cacheObj);
 		} catch (error) {
 			console.error(error);
 		}
@@ -337,11 +337,13 @@ class Dbscene extends EventEmitter {
 				? checkMapping(oscMessage.argsArr[0])
 				: checkMapping(this.config.ds100.defaultMapping);
 
+		// Step 1 - Get current positions
 		await this.queryAllObjPos();
 
+		// Step 2 - Create and name group cue
 		let groupCueID;
 		try {
-			groupCueID = await this.newDbsceneGroup(); // newTempGroup returns the cue ID of the created cue.
+			groupCueID = await this.newDbsceneGroup(); // newDbsceneGroup returns the cue ID of the created cue.
 			this.sendToQLab({
 				address: `/cue_id/${groupCueID}/name`,
 				args: ['dbscene: '],
@@ -350,6 +352,7 @@ class Dbscene extends EventEmitter {
 			console.error(error);
 		}
 
+		// Step 3 - Create the individual network cues
 		// eslint-disable-next-line no-restricted-syntax
 		for (const cacheObj of this.cache) {
 			try {
@@ -386,6 +389,7 @@ class Dbscene extends EventEmitter {
 			}
 		}
 
+		// Step 4 - Select and collapse the group cue
 		try {
 			// Selects and collapses the group using both OSC and osascript
 			await this.selectAndCollapseCue(groupCueID);
