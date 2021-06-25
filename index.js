@@ -343,7 +343,7 @@ class Dbscene extends EventEmitter {
 		// Step 2 - Create and name group cue
 		let groupCueID;
 		try {
-			groupCueID = await this.newDbsceneGroup(); // newDbsceneGroup returns the cue ID of the created cue.
+			groupCueID = await this.createQLabCue('group'); // Returns uniqueID of new cue
 			this.sendToQLab({
 				address: `/cue_id/${groupCueID}/name`,
 				args: ['dbscene: '],
@@ -356,7 +356,7 @@ class Dbscene extends EventEmitter {
 		// eslint-disable-next-line no-restricted-syntax
 		for (const cacheObj of this.cache) {
 			try {
-				const cueID = await this.newNetworkCue(cacheObj.num);
+				const cueID = await this.createQLabCue('network');
 
 				this.sendToQLab({
 					address: `/cue_id/${cueID}/patch`,
@@ -404,7 +404,7 @@ class Dbscene extends EventEmitter {
 	 * @returns {void}
 	 */
 	async dbsceneUpdate() {
-		const selectedCues = await this.getSelectedCues();
+		const selectedCues = await this.fetchQLabData('/selectedCues/shallow');
 		selectedCues.forEach(async (selectedCue) => {
 			try {
 				if (selectedCue.type === 'Group' && selectedCue.name.startsWith('dbscene:')) {
@@ -423,7 +423,7 @@ class Dbscene extends EventEmitter {
 	 * @param {string} cueID The unique ID of the cue
 	 */
 	async updateGroupCue(cueID) {
-		const children = await this.getChildrenOfCue(cueID);
+		const children = await this.fetchQLabData(`/cue_id/${cueID}/children/shallow`);
 		children.forEach((childCue) => {
 			if (childCue.type === 'Network') {
 				try {
@@ -441,7 +441,7 @@ class Dbscene extends EventEmitter {
 	 */
 	async updateNetworkCue(cueID) {
 		// Get the custom message of the child cue
-		const customMessage = await this.getCustomMessageOfCue(cueID);
+		const customMessage = await this.fetchQLabData(`/cue_id/${cueID}/customString`);
 		const messageParts = customMessage.split(' ');
 
 		// Custom Message validity check
@@ -592,10 +592,10 @@ class Dbscene extends EventEmitter {
 	}
 
 	/**
-	 * Create a QLab group cue to hold the new network cues
-	 * @returns {string} The unique ID of the new group cue
+	 * Create a QLab cue
+	 * @returns {string} The unique ID of the new QLab cue
 	 */
-	newDbsceneGroup() {
+	createQLabCue(cueType) {
 		return new Promise((resolve, reject) => {
 			this.qlabServer.on('qlabReplied', (reply) => {
 				if (reply.address.endsWith('/new')) {
@@ -603,27 +603,7 @@ class Dbscene extends EventEmitter {
 				}
 			});
 
-			this.sendToQLab({ address: '/new', args: ['group'] });
-
-			setTimeout(() => {
-				reject(new Error('QLab OSC reply timeout'));
-			}, 1000);
-		});
-	}
-
-	/**
-	 * Create a QLab network cue
-	 * @returns {string} The unique ID of the new network cue
-	 */
-	newNetworkCue() {
-		return new Promise((resolve, reject) => {
-			this.qlabServer.on('qlabReplied', (reply) => {
-				if (reply.address.endsWith('/new')) {
-					resolve(reply.data); // The reply data is the uniqueID of the new cue
-				}
-			});
-
-			this.sendToQLab({ address: '/new', args: ['network'] });
+			this.sendToQLab({ address: '/new', args: [cueType] });
 
 			setTimeout(() => {
 				reject(new Error('QLab OSC reply timeout'));
@@ -653,63 +633,19 @@ class Dbscene extends EventEmitter {
 	}
 
 	/**
-	 * Get QLab's currently selected cues for the purpose of updates
-	 * @returns {Object[]} The selected cues
+	 * Get data from QLab
+	 * @param {string} request
 	 */
-	getSelectedCues() {
+	fetchQLabData(request) {
+		// Reply format: {"workspace_id" : string, "address": "/invoked/osc/method", "status": string, "data": value}
 		return new Promise((resolve, reject) => {
 			this.qlabServer.on('qlabReplied', (reply) => {
-				if (reply.address.endsWith('/selectedCues/shallow')) {
-					resolve(reply.data); // The reply data is an array of selected cues
+				if (reply.address.endsWith(request)) {
+					resolve(reply.data);
 				}
 			});
 
-			this.sendToQLab({ address: '/selectedCues/shallow', args: [] });
-
-			setTimeout(() => {
-				reject(new Error('Qlab OSC reply timeout'));
-			}, 1000);
-		});
-	}
-
-	/**
-	 * Get children of a given QLab cue
-	 * @param {string} uniqueID The unique ID of the group cue being queried
-	 * @returns {Object[]} The child cues
-	 */
-	getChildrenOfCue(uniqueID) {
-		return new Promise((resolve, reject) => {
-			this.qlabServer.on('qlabReplied', (reply) => {
-				if (reply.address.endsWith(`/cue_id/${uniqueID}/children/shallow`)) {
-					resolve(reply.data); // The reply data is an array of selected cues
-				}
-			});
-
-			this.sendToQLab({ address: `/cue_id/${uniqueID}/children/shallow`, args: [] });
-
-			setTimeout(() => {
-				reject(new Error('QLab OSC reply timeout'));
-			}, 1000);
-		});
-	}
-
-	/**
-	 * Get custom OSC message of a given QLab network cue
-	 * @param {string} uniqueID The unique ID of the network cue being queried
-	 * @returns {string} The custom OSC message of the queried cue
-	 */
-	getCustomMessageOfCue(uniqueID) {
-		return new Promise((resolve, reject) => {
-			this.qlabServer.on('qlabReplied', (reply) => {
-				if (reply.address.endsWith(`/cue_id/${uniqueID}/customString`)) {
-					resolve(reply.data); // The reply data is the custom OSC message of the cue
-				}
-			});
-
-			this.sendToQLab({
-				address: `/cue_id/${uniqueID}/customString`,
-				args: [],
-			});
+			this.sendToQLab({ address: request, args: [] });
 
 			setTimeout(() => {
 				reject(new Error('QLab OSC reply timeout'));
