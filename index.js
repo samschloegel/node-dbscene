@@ -343,7 +343,7 @@ class Dbscene extends EventEmitter {
 		// Step 2 - Create and name group cue
 		let groupCueID;
 		try {
-			groupCueID = await this.newQLabCue('group'); // Returns uniqueID of new cue
+			groupCueID = await this.createQLabCue('group'); // Returns uniqueID of new cue
 			this.sendToQLab({
 				address: `/cue_id/${groupCueID}/name`,
 				args: ['dbscene: '],
@@ -356,7 +356,7 @@ class Dbscene extends EventEmitter {
 		// eslint-disable-next-line no-restricted-syntax
 		for (const cacheObj of this.cache) {
 			try {
-				const cueID = await this.newQLabCue('network');
+				const cueID = await this.createQLabCue('network');
 
 				this.sendToQLab({
 					address: `/cue_id/${cueID}/patch`,
@@ -595,7 +595,7 @@ class Dbscene extends EventEmitter {
 	 * Create a QLab cue
 	 * @returns {string} The unique ID of the new QLab cue
 	 */
-	newQLabCue(cueType) {
+	createQLabCue(cueType) {
 		return new Promise((resolve, reject) => {
 			this.qlabServer.on('qlabReplied', (reply) => {
 				if (reply.address.endsWith('/new')) {
