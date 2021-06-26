@@ -137,8 +137,9 @@ class Dbscene extends EventEmitter {
 	 * Constructor
 	 * @param {DbsceneConfig} config
 	 * @param {Object} cache The Soundscape objects
+	 * @param {Object} groups
 	 */
-	constructor(config, cache) {
+	constructor(config, cache, groups) {
 		super();
 
 		if (typeof config !== 'object') throw new TypeError('Dbscene Config must be an object');
@@ -163,6 +164,11 @@ class Dbscene extends EventEmitter {
 			this.cache.push(newObject);
 		});
 		if (this.config.logging >= 2) console.log('Objects:', this.cache);
+
+		this.groups = groups;
+		this.groups.all = cacheObjects.map((kvPair) => parseInt(kvPair[0]));
+		console.log('----------GROUPS----------');
+		console.log(this.groups);
 
 		this.dbServer = udp.createSocket('udp4');
 		this.qlabServer = udp.createSocket('udp4');
@@ -224,7 +230,7 @@ class Dbscene extends EventEmitter {
 		});
 
 		dbServer.on('dbscene', (oscMessage) => {
-			if (oscMessage.address === '/dbscene/create') {
+			if (oscMessage.address.startsWith('/dbscene/create')) {
 				this.dbsceneCreate(oscMessage);
 			} else if (oscMessage.address === '/dbscene/update') {
 				this.dbsceneUpdate(oscMessage);
@@ -337,6 +343,13 @@ class Dbscene extends EventEmitter {
 				? checkMapping(oscMessage.argsArr[0])
 				: checkMapping(this.config.ds100.defaultMapping);
 
+		const objGroupName =
+			oscMessage.pathArr.length > 2 && oscMessage.pathArr[2] === 'group'
+				? oscMessage.pathArr[3]
+				: 'all';
+
+		const objGroup = this.groups[objGroupName];
+
 		// Step 1 - Get current positions
 		await this.queryAllObjPos();
 
@@ -354,8 +367,10 @@ class Dbscene extends EventEmitter {
 
 		// Step 3 - Create the individual network cues
 		// eslint-disable-next-line no-restricted-syntax
-		for (const cacheObj of this.cache) {
+		for (const objNum of objGroup) {
 			try {
+				const cacheObj = this.getCacheObj(objNum);
+
 				const cueID = await this.createQLabCue('network');
 
 				this.sendToQLab({
