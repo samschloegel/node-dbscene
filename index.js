@@ -350,6 +350,7 @@ class Dbscene extends EventEmitter {
 			});
 		} catch (error) {
 			console.error(error);
+			return;
 		}
 
 		// Step 3 - Create the individual network cues
@@ -404,7 +405,14 @@ class Dbscene extends EventEmitter {
 	 * @returns {void}
 	 */
 	async dbsceneUpdate() {
-		const selectedCues = await this.fetchQLabData('/selectedCues/shallow');
+		let selectedCues;
+		try {
+			selectedCues = await this.fetchQLabData('/selectedCues/shallow');
+		} catch (error) {
+			console.error(error);
+			return;
+		}
+
 		selectedCues.forEach(async (selectedCue) => {
 			try {
 				if (selectedCue.type === 'Group' && selectedCue.name.startsWith('dbscene:')) {
