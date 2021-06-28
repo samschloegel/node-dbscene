@@ -124,7 +124,7 @@ Each dbscene's qname **must** begin with the prefix "dbscene: " (including the c
 # Dbscene Instance Methods
 
 - `getCache()` - Returns the cache
-- `startDbServer()` - Binds the UDP socket for teh DS100 to its port and listens for OSC messages
+- `startDbServer()` - Binds the UDP socket for the DS100 to its port and listens for OSC messages
 - `startQLabServer()` - See above, same idea
 - `queryAllObjPos([mapping])` - Refreshes all object positions with current positions from the DS100
 - `getCacheObj(objNum)` - Returns the cache object with the provided number. Throws an error if none is found.
